@@ -1,0 +1,6 @@
+./**/*.pyc
+.vscode
+./src/__pycache__
+./src/proto/__pycache__
+csv
+pcaps
