@@ -21,7 +21,7 @@ class Field:
         else:
             self.value = t(layer.get(key) or 0)
         self.to_csv = to_csv
-        self.str_value = to_str
+        self.to_str = to_str
 
     def add_to_csv(self):
         return self.to_csv

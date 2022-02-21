@@ -8,19 +8,50 @@ class Layer:
     contains the subset of information that we shall store
     from each network layer
     """
-    def __init__(self, l):
+    def __init__(self, l, pl):
         self.name = l.layer_name
+        self.previous_layer = pl
         self._fields = []
+        self.sport = None
+        self.dport = None
+        self.sip = None
+        self.dip = None
+        self.argus_proto_name = None
 
+    def get_previous_layer(self,):
+        return self.pl 
+
+    def get_argus_proto_name(self):
+        return self.argus_proto_name
+        
+    def set_argus_proto_name(self, apn):
+        self.argus_proto_name = apn
+
+    def get_ports(self,):
+        return self.sport, self.dport
+
+    def set_ports(self, sport, dport):
+        self.sport = sport.get_value()
+        self.dport = dport.get_value()
+        
+    def get_ips(self,):
+        return self.sip, self.dip
+
+    def set_ips(self,sip, dip):
+        self.sip = sip.get_value()
+        self.dip = dip.get_value()
+        
     def get_name(self,):
         return self.name
     def get_fields(self):
         return self._fields
+    def get_field_value(self,):
+        pass
 
 
 class ETH_Layer(Layer):
-    def __init__(self, l):
-        super().__init__(l)
+    def __init__(self, l, pl):
+        super().__init__(l, pl)
         # no need to include src and dst to csv
         # we are not performing mac addr blacklisting yet
         self._fields.append(Field(l, 'src', to_csv=False, t=str))
@@ -29,8 +60,9 @@ class ETH_Layer(Layer):
 
 
 class ARP_Layer(Layer):
-    def __init__(self, l):
-        super().__init__(l)
+    def __init__(self, l, pl):
+        super().__init__(l, pl)
+        self.set_argus_proto_name('arp')
         self._fields.append(Field(l, 'hw_type')) 
         self._fields.append(Field(l, 'proto_type', b=16)) 
         self._fields.append(Field(l, 'hw_size')) 
@@ -38,8 +70,8 @@ class ARP_Layer(Layer):
         self._fields.append(Field(l, 'opcode')) 
 
 class DHCP_Layer(Layer):
-    def __init__(self, l):
-        super().__init__(l)
+    def __init__(self, l, pl):
+        super().__init__(l, pl)
         self._fields.append(Field(l, 'hw_type', b=16))
         self._fields.append(Field(l, 'hw_len'))
         self._fields.append(Field(l, 'hops'))
@@ -54,8 +86,8 @@ class DHCP_Layer(Layer):
         self._fields.append(Field(l, 'option_end'))
 
 class DNS_Layer(Layer):
-    def __init__(self, l):
-        super().__init__(l)
+    def __init__(self, l, pl):
+        super().__init__(l, pl)
         self._fields.append(Field(l, 'flags_response')) 
         self._fields.append(Field(l, 'flags_opcode')) 
         self._fields.append(Field(l, 'flags_truncated')) 
@@ -74,12 +106,15 @@ class DNS_Layer(Layer):
         self._fields.append(Field(l, 'qry_type')) 
 
 class IP_Layer(Layer):
-    def __init__(self, l):
-        super().__init__(l)
+    def __init__(self, l, pl):
+        super().__init__(l, pl)
         # no need to include src and dst to csv
         # we are not performing ip addr blacklisting yet
-        self._fields.append(Field(l, 'src', t=str, to_csv=False))
-        self._fields.append(Field(l, 'dst', t=str, to_csv=False))
+        src_ip = Field(l, 'src', t=str, to_csv=False)
+        self._fields.append(src_ip)
+        dst_ip = Field(l, 'dst', t=str, to_csv=False)
+        self._fields.append(dst_ip)
+        self.set_ips(src_ip, dst_ip)
         self._fields.append(Field(l, 'checksum_status'))
         self._fields.append(Field(l, 'ttl'))
         self._fields.append(Field(l, 'proto'))
@@ -93,12 +128,16 @@ class IP_Layer(Layer):
         self._fields.append(Field(l, 'len'))
 
 class IPv6_Layer(Layer):
-    def __init__(self, l):
-        super().__init__(l)
+    def __init__(self, l, pl):
+        super().__init__(l, pl)
+        self.set_argus_proto_name('ipv6_icmp')
         # no need to include src and dst to csv
         # we are not performing ip addr blacklisting yet
-        self._fields.append(Field(l, 'src', t=str, to_csv=False))
-        self._fields.append(Field(l, 'dst', t=str, to_csv=False))
+        src_ip = Field(l, 'src', t=str, to_csv=False)
+        self._fields.append(src_ip)
+        dst_ip = Field(l, 'dst', t=str, to_csv=False)
+        self._fields.append(dst_ip)
+        self.set_ips(src_ip, dst_ip)
         self._fields.append(Field(l, 'tclass', b=16))
         self._fields.append(Field(l, 'tclass_dscp', b=16))
         self._fields.append(Field(l, 'tclass_ecn', b=16))
@@ -109,27 +148,41 @@ class IPv6_Layer(Layer):
 
 
 class ICMP_Layer(Layer):
-    def __init__(self, l):
-        super().__init__(l)
+    def __init__(self, l, pl):
+        super().__init__(l, pl)
+        if isinstance(pl, IPv6_Layer):
+            self.set_argus_proto_name('ipv6-icmp')
+        else:
+            self.set_argus_proto_name('icmp')
         self._fields.append(Field(l, 'code'))
         self._fields.append(Field(l, 'type'))
         self._fields.append(Field(l, 'checksum_status'))
         
 class UDP_Layer(Layer):
-    def __init__(self, l):
-        super().__init__(l)
-        self._fields.append(Field(l, 'srcport'))
-        self._fields.append(Field(l, 'dstport'))
+    def __init__(self, l, pl):
+        super().__init__(l, pl)
+        self.set_argus_proto_name('udp')
+        srcport = Field(l, 'srcport')
+        self._fields.append(srcport)
+        dstport = Field(l, 'dstport')
+        self._fields.append(dstport)
+        self.set_ports(srcport, dstport)
+        self.set_ports(srcport, dstport)
+
         self._fields.append(Field(l, 'len'))
         self._fields.append(Field(l, 'time_relative', t=float))
         self._fields.append(Field(l, 'time_delta', t=float))
 
 
 class TCP_Layer(Layer):
-    def __init__(self, l):
-        super().__init__(l)
-        self._fields.append(Field(l, 'srcport'))
-        self._fields.append(Field(l, 'dstport'))
+    def __init__(self, l, pl):
+        super().__init__(l, pl)
+        self.set_argus_proto_name('tcp')
+        srcport = Field(l, 'srcport')
+        self._fields.append(srcport)
+        dstport = Field(l, 'dstport')
+        self._fields.append(dstport)
+        self.set_ports(srcport, dstport)
         self._fields.append(Field(l, 'len'))
         self._fields.append(Field(l, 'seq'))
         self._fields.append(Field(l, 'ack'))
@@ -166,17 +219,17 @@ class TCP_Layer(Layer):
         self._fields.append(Field(l, 'options_eol', store_existance=True))
         self._fields.append(Field(l, 'options_nop', store_existance=True))
 
-class QUICC_LAYER(Layer):
-    def __init__(self, l):
+class QUIC_LAYER(Layer):
+    def __init__(self, l, pl):
         pass
 class HTTP_Layer(Layer):
-    def __init__(self, l):
-        super().__init__(l)
+    def __init__(self, l, pl):
+        super().__init__(l, pl)
 
 
 class TLS_Layer(Layer):
-    def __init__(self, l):
-        super().__init__(l)
+    def __init__(self, l, pl):
+        super().__init__(l, pl)
         self._fields.append(Field(l, 'record_type'))
         self._fields.append(Field(l, 'record_length'))
         self._fields.append(Field(l, 'record_version', b=16, to_str=get_tls_version_to_str))
