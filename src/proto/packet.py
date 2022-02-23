@@ -47,6 +47,7 @@ class Packet:
 
     def get_csv_fields(self,):
         fields = {}
+        fields["id"] = self._idx
         for l in self._layers:
             layer_fields = l.get_fields()
             for f in layer_fields:

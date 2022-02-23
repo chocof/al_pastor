@@ -104,7 +104,13 @@ class DNS_Layer(Layer):
         self._fields.append(Field(l, 'qry_name_len')) 
         self._fields.append(Field(l, 'count_labels'))
         self._fields.append(Field(l, 'qry_type')) 
-
+        
+        self._fields.append(Field(l, 'resp_class', b=16)) 
+        self._fields.append(Field(l, 'resp_len')) 
+        self._fields.append(Field(l, 'resp_ttl'))
+        self._fields.append(Field(l, 'resp_type')) 
+        self._fields.append(Field(l, 'response_to')) 
+        
 class IP_Layer(Layer):
     def __init__(self, l, pl):
         super().__init__(l, pl)
